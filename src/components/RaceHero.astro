@@ -6,8 +6,12 @@
 // Without JavaScript the visitor sees a static picture of one finished race.
 import { withBase } from '../lib/base';
 import { SHOW_AUTHOR } from '../lib/flags';
+import raceManifest from '../../public/race/SOURCE.json';
 
 const base = withBase('/race/');
+// Content versions of the race's files (tools/sync_race.py), so browsers never keep stale copies.
+const files = (raceManifest as { files: Record<string, string> }).files;
+const asset = (name: string) => withBase(`/race/${name}`) + (files[name] ? `?v=${files[name].slice(0, 12)}` : '');
 const note = `The <a href="${withBase('/results/')}">Results page</a> has the 600-cell comparison.`;
 // The source link names the author's account, so it follows the author switch.
 const source = SHOW_AUTHOR ? 'https://github.com/BjBodner/bbob-landscapes' : '';
@@ -29,11 +33,11 @@ const source = SHOW_AUTHOR ? 'https://github.com/BjBodner/bbob-landscapes' : '';
 	</div>
 </section>
 
-<link rel="stylesheet" href={withBase('/race/race.css')} />
+<link rel="stylesheet" href={asset('race.css')} />
 <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script is:inline src={withBase('/race/bbob-meta.js')}></script>
-<script is:inline src={withBase('/race/landscape.js')}></script>
-<script is:inline src={withBase('/race/race.js')}></script>
+<script is:inline src={asset('bbob-meta.js')}></script>
+<script is:inline src={asset('landscape.js')}></script>
+<script is:inline src={asset('race.js')}></script>
 <script is:inline>
 	(() => {
 		// 100vw counts the scrollbar; the window's inner width without it is measured instead.
