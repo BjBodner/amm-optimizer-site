@@ -1,12 +1,12 @@
 {
  "source": "bbob-landscapes",
- "commit": "f210314",
+ "commit": "6fc1271",
  "uncommitted_changes": false,
  "files": {
   "bbob-meta.js": "5608066c856927d7ec916d6384e9f019bb9dd80df8fdc1cc15a7dc55f997fec2",
   "landscape.js": "9de99022b2108b6e674cd57a3c866c273d4c710f82dd5a1948b4a23d0eeed24a",
-  "race.js": "f39b98c57768bcb7a38513c98d982b0c3200b23287a986363b0b720097db437a",
-  "race.css": "17b7fc9167a3736c00b41c2b4cb9f91642270b5589d061eb21e9bdad61bb6679",
+  "race.js": "c48c605c50db1d974c38cb720a274341695bb7d0eb89c8da8dc4811f0b709a46",
+  "race.css": "7cda291b9e1ee6ccdb6e3a62c56cc5a7961e2d1646969ac7087097d7478ca131",
   "index.json": "c5f311aceec57bc741e0ad3a19e1017a5841f8ab17ea552855be299ed9d1b650",
   "data/f10_i1.json": "165161c13c4ada35d41578407ef6fc1c06bdf7aeebc432438e00c4efe82e346f",
   "data/f10_i2.json": "584d4cc71ba034ab2fe1e87c5c7fa6e1141966e8553fd354ceaf25e5de58b19f",
