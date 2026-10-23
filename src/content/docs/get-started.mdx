@@ -6,7 +6,7 @@ description: "Install AMM, run a ten-line example, and read the result: what bou
 import Claim from '../../components/Claim.astro';
 
 AMM (Adaptive Multi Mode) minimises a function you can only evaluate, with no gradients. You give it
-a starting point, a search box and the number of evaluations you can afford. It returns the best
+a search box and, if you wish, a starting point and the number of evaluations you can afford. It returns the best
 point it found.
 
 ## Install
@@ -18,22 +18,24 @@ PyPI status: <Claim id="release.pypi" />.
 pip install amm-optimizer
 ```
 
-The release 0.2.0 was withdrawn (yanked) because it imported as `amm` or `atm` and its default `minimize` was the
-original ATM sampler. From a checkout of the public repository (<Claim id="repo.public_url" />), `pip install -e .` installs
+PyPI has the releases 0.3.0 and 0.5.0. The release 0.2.0 was withdrawn (yanked) because it imported as `amm` or `atm` and its default `minimize` was the
+original ATM sampler. The tag v0.4.0 exists in the repository, but 0.4.0 was never published to PyPI; its changes are part of 0.5.0. From a checkout of the public repository (<Claim id="repo.public_url" />), `pip install -e .` installs
 the development version; `pip install -e ".[bench]"` adds the COCO tooling used by the benchmarks.
 
 The package is version <Claim id="pkg.version_public" /> and needs <Claim id="pkg.requires" />, as declared in `pyproject.toml`
 of the repository. The licence is <Claim id="pkg.license" />.
 
-:::danger[Pass config= to get AMM]
-`amm_optimizer.minimize` without `config=` runs <Claim id="pkg.default_config" />. AMM needs
-`config=amm_optimizer.presets.get("c46")`. Changing the default is not done and is not decided, so every example on this site passes the
-configuration explicitly.
+:::note[Coming from 0.3.0?]
+The default changed. `amm_optimizer.minimize` without `config=` now runs <Claim id="pkg.default_config" />. The change was listed first as version 0.4.0,
+which was tagged but never published, so it reached PyPI in 0.5.0. In 0.3.0 the same call
+ran the original ATM sampler, and AMM needed `config=amm_optimizer.presets.get("c46")`. You can drop that argument. If
+you call `minimize` without `bounds=` it now raises `ValueError`; the original sampler, `config=amm_optimizer.ATMConfig()`, still needs no bounds. See the [changelog](/changelog/).
 :::
 
 ## The ten-line example
 
-This is the example from the [home page](/), with its output.
+This is the example from the [home page](/), with its output. It passes every argument. Only `fun` and `bounds` are required, so the shortest call is
+`amm_optimizer.minimize(rosenbrock, bounds=[(-5, 5)] * 5)`, which starts from the centre of the box and spends 500 evaluations (100 x D).
 
 ```python
 import numpy as np
@@ -42,10 +44,7 @@ import amm_optimizer
 def rosenbrock(x):
     return float(np.sum(100 * (x[1:] - x[:-1] ** 2) ** 2 + (1 - x[:-1]) ** 2))
 
-result = amm_optimizer.minimize(
-    rosenbrock, x0=np.zeros(5), bounds=(-5, 5), budget=2000, seed=0,
-    config=amm_optimizer.presets.get("c46"),
-)
+result = amm_optimizer.minimize(rosenbrock, x0=np.zeros(5), bounds=(-5, 5), budget=2000, seed=0)
 print(result.nfev, result.fun)
 print(result.x.round(3))
 ```
@@ -55,24 +54,26 @@ print(result.x.round(3))
 [1. 1. 1. 1. 1.]
 ```
 
-The known optimum is x = (1, 1, 1, 1, 1) with f = 0. The output was produced by the frozen
-configuration `c46` (config hash <Claim id="freeze.config_hash" />). The last digits of `fun` depend on the
+The known optimum is x = (1, 1, 1, 1, 1) with f = 0. The call runs AMM, the frozen
+configuration `c46` (config hash <Claim id="freeze.config_hash" />), because no `config=` is given. The last digits of `fun` depend on the
 number of BLAS threads the machine uses (one thread gives a different value near 1e-13); `x` does
-not change at this precision. Without the `config=` line the same call runs the original ATM sampler and reaches
-only f = 1.7 on this example.
+not change at this precision. The original ATM sampler is `config=amm_optimizer.ATMConfig()`; on this example it reaches
+only f = 1.7. `bounds=` is required for the default call and `minimize` raises `ValueError` without it; the original
+sampler does not need it. `amm_optimizer.api.minimize` is also the original sampler.
 
 ## What the arguments mean
 
-The signature in the repository is `minimize(fun, x0, budget, *, seed=None, rng=None, config=None, profile=False, bounds=None)`.
+The signature of the released package (0.5.0) is `minimize(fun, x0=None, budget=None, *, bounds=None, seed=None, anytime=False, config=None, rng=None, profile=False)`.
 
 | Argument | Meaning |
 |---|---|
 | `fun` | A function that takes a 1-D NumPy array and returns a number (it is passed through `float`). It must be deterministic. |
-| `x0` | The starting point. Its length is the dimension D. The objective must be finite there, or `ValueError` is raised. With `budget=1` the only evaluation is `x0`. Different starting points give different runs; the benchmarks draw them uniformly from the box. |
-| `budget` | The maximum number of calls to `fun`, at least 1. With the default accounting no more than `budget` calls are made, every call counts, and the best point found is kept even if the budget ends mid-step. `result.nfev` is the true number of calls. |
-| `bounds` | `(lower, upper)`, each a scalar or one value per coordinate. Finite, with every lower bound below its upper bound. `c46` and the other presets raise `ValueError` without it. |
+| `x0` | Optional. The starting point; its length is the dimension D. Default: the centre of the box, which needs one `(low, high)` pair per coordinate in `bounds` so that D is known. The objective must be finite there, or `ValueError` is raised. With `budget=1` the only evaluation is `x0`. Different starting points give different runs; the benchmarks draw them uniformly from the box. |
+| `budget` | Optional. The maximum number of calls to `fun`, a whole number of at least 1 (a whole float such as `1e4` is accepted). Default: 100 x D evaluations, at least 100. With the default accounting no more than `budget` calls are made, every call counts, and the best point found is kept even if the budget ends mid-step. `result.nfev` is the true number of calls. |
+| `bounds` | The search box. Any of: a list of `(low, high)` pairs, one per coordinate (SciPy's form); a tuple `(lower, upper)`, each a scalar or one value per coordinate; a NumPy array of shape `(D, 2)`; `scipy.optimize.Bounds`. Finite, with every lower bound below its upper bound. Required when `config` is omitted (AMM) and by the presets: `ValueError` without it. The original `ATMConfig()` does not need it. A tuple of two length-2 sequences that reads both as two pairs and as `(lower, upper)` is refused with a message that names the fix. |
 | `seed` | Makes the run reproducible: the same seed, objective, `x0`, `budget` and `bounds` give the same result on the same software. `rng` takes an existing `numpy.random.RandomState` instead. |
-| `config` | An `ATMConfig`. `None` means the original ATM sampler, not AMM. See the [API reference](/api/). |
+| `anytime` | `True` turns on the anytime mode, for runs whose budget is not known in advance or that you will cut short. Leave it off if you know your budget. See [Anytime mode](/guides/#anytime-mode) in the guides. |
+| `config` | An `ATMConfig`. Omit it to run AMM (`c46`). `amm_optimizer.ATMConfig()` selects the original ATM sampler. See the [API reference](/api/). |
 | `profile` | `True` records the time spent in each named block of the algorithm in `result.timings`. It does not change the result. |
 
 **Bounds are used by the optimizer, not enforced on your function from outside.** In the code, the
@@ -130,5 +131,5 @@ A Colab notebook does not exist yet. It is a pending item and will be linked her
 ## Next
 
 - [Guides](/guides/): budget, bounds, seeds, parallel evaluation, wrapping an objective, errors.
-- [API reference](/api/): every public name of version 0.3.0.
+- [API reference](/api/): every public name of version <Claim id="pkg.version_public" />.
 - [Reproduce](/reproduce/): the pinned versions and commands behind the benchmark numbers.

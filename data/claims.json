@@ -47,10 +47,10 @@
     },
     "release.pypi": {
       "label": "PyPI release of amm-optimizer",
-      "value": "0.3.0 on PyPI (0.2.0 yanked)",
+      "value": "0.5.0 on PyPI (0.4.0 was tagged but never published; 0.2.0 yanked)",
       "status": "final",
       "requiresFinal": false,
-      "source": "pypi.org/pypi/amm-optimizer/json on 2026-10-23: 0.3.0 uploaded 14:08 UTC, 0.2.0 marked yanked; release workflow run for tag v0.3.0 succeeded; checked that pip install amm-optimizer installs 0.3.0 and the site snippet reproduces its printed output"
+      "source": "pypi.org/pypi/amm-optimizer/json on 2026-10-26: releases 0.2.0 (yanked), 0.3.0, 0.5.0; the v0.4.0 release run was cancelled and its changes shipped in 0.5.0; installed 0.5.0 fresh and ran the home-page snippet: it printed the page's text exactly"
     },
     "release.doi": {
       "label": "Zenodo DOI of the first release",
@@ -1075,11 +1075,11 @@
       "source": "Zenodo deposit prepared by the site work; the maintainer uploads it"
     },
     "repo.commit_public": {
-      "label": "commit of the public repository that contains the released code",
-      "value": "c4f0ab1",
+      "label": "commit of the public repository that the current release (tag v0.5.0) was built from",
+      "value": "2a8986d",
       "status": "final",
       "requiresFinal": false,
-      "source": "git log of github.com/BjBodner/amm-optimizer on 2026-10-23: one commit, 'amm-optimizer 0.3.0'"
+      "source": "git ls-remote of github.com/BjBodner/amm-optimizer on 2026-10-26: refs/tags/v0.5.0^{} = 2a8986d (0.3.0 was built from c4f0ab1, the repository's first commit)"
     },
     "pkg.import_name": {
       "label": "import name of the package in the repository (version 0.3.0)",
@@ -1089,18 +1089,18 @@
       "source": "pyproject.toml and src/amm_optimizer of the public repository"
     },
     "pkg.default_config": {
-      "label": "what amm_optimizer.minimize runs without config=",
-      "value": "the original ATM sampler (not AMM)",
+      "label": "what amm_optimizer.minimize runs without config= (0.4.0 and later; first on PyPI in 0.5.0)",
+      "value": "AMM (c46); requires bounds=",
       "status": "final",
       "requiresFinal": false,
-      "source": "checked 2026-10-23 on the 0.3.0 source and on PyPI 0.2.0: f = 1.7107 on the home-page example; AMM needs config=amm_optimizer.presets.get('c46') (f = 2.4585e-13)"
+      "source": "checked on the released 0.5.0 from PyPI on 2026-10-26: runs presets.get('c46') and raises ValueError without bounds=; 0.3.0 ran the original ATM sampler (f = 1.7107 on the home-page example)"
     },
     "pkg.version_public": {
       "label": "package version in the public repository",
-      "value": "0.3.0",
+      "value": "0.5.0",
       "status": "final",
       "requiresFinal": false,
-      "source": "pyproject.toml and src/amm_optimizer/__init__.py of github.com/BjBodner/amm-optimizer, commit c4f0ab1 (checked 2026-10-23). pkg.version (0.2.0.dev0) is the development version at the freeze and stays for the run-file records."
+      "source": "PyPI amm-optimizer 0.5.0 (uploaded 2026-10-25) and tag v0.5.0 of github.com/BjBodner/amm-optimizer (commit 2a8986d)"
     },
     "pkg.requires": {
       "label": "runtime requirements declared by version 0.3.0",

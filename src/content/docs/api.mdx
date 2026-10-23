@@ -1,17 +1,20 @@
 ---
 title: API reference
-description: "The public interface of the amm_optimizer package, version 0.3.0: minimize, OptimizeResult, ATMConfig, the presets including c46, and the profiling types."
+description: "The public interface of the amm_optimizer package, version 0.5.0: minimize, OptimizeResult, ATMConfig, the presets including c46, and the profiling types."
 ---
 
 import Claim from '../../components/Claim.astro';
 
 Written from the source of version <Claim id="pkg.version_public" /> in the public repository (<Claim id="repo.public_url" />,
-commit <Claim id="repo.commit_public" />): `src/amm_optimizer/api.py`, `config.py`, `presets.py`, `result.py`, `profiling.py` and
-`__init__.py`. The import is `amm_optimizer`; the old module names `atm` and `amm` of the 0.2.0 release do not exist in 0.3.0.
+commit <Claim id="repo.commit_public" />): `src/amm_optimizer/default.py`, `api.py`, `config.py`, `presets.py`, `result.py`, `profiling.py` and
+`__init__.py`. The import is `amm_optimizer`; the old module names `atm` and `amm` of the 0.2.0 release do not exist.
 
-:::caution[The default config is not AMM]
-`amm_optimizer.minimize(...)` without `config=` runs <Claim id="pkg.default_config" />. AMM is selected with
-`config=amm_optimizer.presets.get("c46")`. No change of the default is decided.
+:::note[The default is AMM]
+`amm_optimizer.minimize(...)` without `config=` runs <Claim id="pkg.default_config" />: the frozen configuration `c46`
+(config hash <Claim id="freeze.config_hash" />). It raises `ValueError` without `bounds=`; the message names the ways out:
+pass `bounds` as a list of `(low, high)` pairs or as `(lower, upper)`, or select the original ATM sampler, which needs no bounds, with
+`config=amm_optimizer.ATMConfig()`. The function `amm_optimizer.api.minimize` is the engine, and its default is still the original sampler. Version 0.3.0 ran the original sampler when `config=` was omitted.
+The change was listed first as version 0.4.0, which was tagged but never published to PyPI, so it reached PyPI in 0.5.0.
 :::
 
 `amm_optimizer.__all__` is: `ATMConfig`, `OptimizeResult`, `Profiler`, `Timings`, `TimingProfiler`, `minimize`,
@@ -21,23 +24,26 @@ commit <Claim id="repo.commit_public" />): `src/amm_optimizer/api.py`, `config.p
 
 ```python
 amm_optimizer.minimize(
-    fun, x0, budget, *,
-    seed=None, rng=None, config=None, profile=False, bounds=None,
+    fun, x0=None, budget=None, *,
+    bounds=None, seed=None, anytime=False, config=None, rng=None, profile=False,
 ) -> OptimizeResult
 ```
 
-Minimise `fun` starting from `x0` with about `budget` evaluations.
+Minimise `fun` over a box with at most `budget` evaluations. The shortest call is `amm_optimizer.minimize(f, bounds=[(-5, 5)] * 10)`.
 
 | Parameter | Type | Description |
 |---|---|---|
-| `fun` | `Callable[[np.ndarray], float]` | The objective. Called with one point at a time. Must be deterministic. |
-| `x0` | array-like | The starting point. Converted with `np.asarray(x0, dtype=float)`. Its length is the dimension. |
-| `budget` | `int` | The maximum number of calls to `fun`. Must be at least 1. |
+| `fun` | `Callable[[np.ndarray], float]` | The objective. Called with one point at a time. Must be deterministic. A `fun` that is not callable raises `TypeError`. |
+| `x0` | array-like or `None` | The starting point. Converted with `np.asarray(x0, dtype=float)`. Its length is the dimension. Default: the centre of the box; then `bounds` must give one `(low, high)` pair per coordinate so that the dimension is known. |
+| `budget` | `int` or `None` | The maximum number of calls to `fun`. A whole number of at least 1; a whole float such as `1e4` is accepted. Default: 100 x D evaluations, at least 100. |
+| `bounds` | list, tuple, array or `scipy.optimize.Bounds` | The search box. Any of: a list of `(low, high)` pairs, one per coordinate (SciPy's form); a tuple `(lower, upper)`, each a scalar or one value per coordinate; an array of shape `(D, 2)`; `scipy.optimize.Bounds`. Required when `config` is omitted and by every preset; the original `ATMConfig()` does not need it. |
 | `seed` | `int or None` | Seed for a reproducible run. |
+| `anytime` | `bool` | `True` turns on the anytime mode, for runs whose budget is not known in advance or that you will cut short. Equivalent to setting `variant.anytime` to `"replay"`. Default `False`. See [Anytime mode](/guides/#anytime-mode). |
+| `config` | `ATMConfig or None` | Omitted, the call runs AMM (`c46`) and needs `bounds`. Pass `amm_optimizer.ATMConfig()` for the original ATM sampler, or another preset from `amm_optimizer.presets`. |
 | `rng` | `np.random.RandomState or None` | An existing generator to continue its stream. Takes precedence over `seed`. |
-| `config` | `ATMConfig or None` | `None` is `ATMConfig()`, the original algorithm. Pass a preset for AMM. |
 | `profile` | `bool` or `Profiler` | `True` times the named blocks and returns them as `result.timings`. A `TimingProfiler` accumulates over several runs. Profiling does not change the result. |
-| `bounds` | `(lower, upper)` or `None` | The search box, each element a scalar or one value per coordinate. Required by every preset. |
+
+The engine, `amm_optimizer.api.minimize`, takes `fun, x0, budget` explicitly and has the original ATM sampler as its default.
 
 Behaviour taken from the code and docstrings:
 
@@ -49,8 +55,9 @@ Behaviour taken from the code and docstrings:
   box onto [-5, 5] in each coordinate and runs there.
 - The objective must be finite at the starting point.
 
-Raises `ValueError` when: `budget` is below 1; a preset needs `bounds` and none was given; the bounds are
-not finite or a lower bound is not below its upper bound; the objective is not finite at the starting point.
+Raises `ValueError` when: `budget` is below 1 or not a whole number; `bounds` is missing and the default (AMM) or a preset needs it; the bounds are
+not finite or a lower bound is not below its upper bound; neither `x0` nor per-coordinate `bounds` say how many variables there are, or they disagree on that number; a tuple of two length-2 sequences reads both as pairs and as
+`(lower, upper)`; the objective is not finite at the starting point.
 
 ## `OptimizeResult`
 
@@ -91,10 +98,6 @@ Constructors and methods:
 |---|---|
 | `ATMConfig()` | The original ATM, bit for bit (with `strict_budget=False`). |
 | `ATMConfig.composite()` | ATM's sampler plus five improvements (success-rate width control, a uniform first pool, bounds folded with a 25% corner clip, a pool sized from the budget, no re-evaluation of the incumbent). Needs `bounds`. |
-| `ATMConfig.improved()` | The composite plus local-search stages (simplex search up to 4 dimensions, (1+1)-ES above, a learned covariance up to 10 dimensions, a simplex tail up to 10 dimensions). The preset the 0.3.0 README calls the recommended one (it is a legacy preset; the README's quick start uses `c46`). Needs `bounds`. |
-| `ATMConfig.improved_wave5()` | The composite with the (1+1)-ES prefix and the learned covariance, no simplex stages. It was `improved()` until 2026-10-19; the research line's composites `c23` to `c31` start from it. |
-| `ATMConfig.improved_v2()` | An alias of `improved()`. |
-| `ATMConfig.improved_wave6()` | An earlier version, kept for reproducibility. Per the docstring it loses to the composite on multimodal functions f15-f19 at 100 x D. |
 | `config.to_dict()` | Every field as plain Python containers. |
 | `ATMConfig.from_dict(data)` | The inverse. |
 | `config.config_hash()` | A 16-character fingerprint of `to_dict()` for provenance. It changes when the schema gains a field, even if behaviour does not (see [Reproduce](/reproduce/)). |
@@ -104,7 +107,7 @@ Validation: a non-default `variant` needs `strict_budget=True`, and `second_best
 
 ## `amm_optimizer.presets`
 
-Named configurations. Every preset needs `minimize(..., bounds=(lower, upper))` and a deterministic objective.
+Named configurations. Every preset needs `bounds=(lower, upper)` in `minimize` and a deterministic objective. The default call is the preset `c46`.
 
 ```python
 amm_optimizer.presets.names()                         # ('c23', 'c24', ..., 'c46')
@@ -126,7 +129,7 @@ frozen for the paper. It is `c45` plus `prefix_low_beta=0.15` from dimension 10.
 
 | Preset | Built from | What it adds (from the docstrings) |
 |---|---|---|
-| `c23` | | `improved()`-style global phase with success-rate widths, a learned covariance and reflection into the box; a (1+1)-CMA-ES prefix up to 100 x D (Nelder-Mead at D 2 or below); then ATM for 20% of the budget, a separable STEP search, and a restarted (1+1)-Cholesky-CMA-ES with quadratic model steps, handing stalls to active population CMA-ES. |
+| `c23` | | A global phase with success-rate widths, a learned covariance and reflection into the box; a (1+1)-CMA-ES prefix up to 100 x D (Nelder-Mead at D 2 or below); then ATM for 20% of the budget, a separable STEP search, and a restarted (1+1)-Cholesky-CMA-ES with quadratic model steps, handing stalls to active population CMA-ES. |
 | `c24` | `c23` | An lq2-surrogate population prefix at 100 x D on non-separable functions; a curvature probe in the hand-over. |
 | `c25` | `c24` | Curvature-gated prefix: SLSQP where the probe reads smooth, lq2 populations where rugged. |
 | `c26` | `c25` | An SLSQP stage before the CMA finisher on smooth non-separable functions. |

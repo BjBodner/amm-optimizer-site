@@ -27,9 +27,8 @@ Install it with `pip install amm-optimizer`, as described in [Get started](/get-
 ATM (Adaptive Two Mode) is the name of the original sampler, which mixes a random search with a search along
 the last successful direction. The configuration frozen for the paper, `c46`, is a hybrid: the ATM sampler is
 one stage among the classical engines listed above, and the routing between them is the main idea. The name AMM
-says that. The package is renamed: the import is `amm_optimizer` (distribution `amm-optimizer`), and the class and preset names (`ATMConfig`, `c46`) keep the old name. Without `config=`, `minimize` runs
-<Claim id="pkg.default_config" />. Whether `c46` becomes the default configuration is not decided, so AMM is selected with
-`config=amm_optimizer.presets.get("c46")`. AMM alone is ambiguous (automated market maker, adaptive mixture
+says that. The package is renamed: the import is `amm_optimizer` (distribution `amm-optimizer`), and the class and preset names (`ATMConfig`, `c46`) keep the old name. In the released package (version <Claim id="pkg.version_public" />), `minimize` without `config=` runs
+<Claim id="pkg.default_config" />. The original ATM sampler is `config=amm_optimizer.ATMConfig()`. AMM alone is ambiguous (automated market maker, adaptive mixture
 Metropolis), so the site always writes the full name.
 
 ## How is it different from CMA-ES, Nevergrad and Optuna?

@@ -42,7 +42,7 @@ test. The harness, the documentation and the analysis scripts may still change.
 ### Check the frozen configuration
 
 The frozen configuration is identified by its config hash. In the public repository, `amm_optimizer.presets.get("c46").config_hash()`
-returns <Claim id="freeze.config_hash" />. That check needs only the public code. It does not need the tag or the archive.
+returns <Claim id="freeze.config_hash" />. In the released package (version <Claim id="pkg.version_public" />), `amm_optimizer.minimize` without `config=` runs this configuration. That check needs only the public code. It does not need the tag or the archive.
 
 ### Two hashes for one configuration
 

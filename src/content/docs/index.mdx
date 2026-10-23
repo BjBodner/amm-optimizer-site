@@ -46,10 +46,7 @@ import amm_optimizer
 def rosenbrock(x):
     return float(np.sum(100 * (x[1:] - x[:-1] ** 2) ** 2 + (1 - x[:-1]) ** 2))
 
-result = amm_optimizer.minimize(
-    rosenbrock, x0=np.zeros(5), bounds=(-5, 5), budget=2000, seed=0,
-    config=amm_optimizer.presets.get("c46"),
-)
+result = amm_optimizer.minimize(rosenbrock, x0=np.zeros(5), bounds=(-5, 5), budget=2000, seed=0)
 print(result.nfev, result.fun)
 print(result.x.round(3))
 ```
@@ -59,8 +56,8 @@ print(result.x.round(3))
 [1. 1. 1. 1. 1.]
 ```
 
-The known optimum is x = (1, 1, 1, 1, 1) with f = 0. `config=` selects AMM (the frozen configuration
-`c46`); without it `minimize` runs the original ATM sampler, which reaches only f = 1.7 on this example.
+The known optimum is x = (1, 1, 1, 1, 1) with f = 0. `minimize` runs AMM by default (the frozen configuration
+`c46`) and needs `bounds=`. The original ATM sampler is `config=amm_optimizer.ATMConfig()`; it reaches only f = 1.7 on this example.
 That output was produced by the frozen configuration `c46` (config hash <Claim id="freeze.config_hash" />) on 2026-10-22. Source and issues: <Claim id="repo.public_url" />.
 
 ## How it compares

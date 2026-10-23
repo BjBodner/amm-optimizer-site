@@ -7,13 +7,13 @@ import Claim from '../../components/Claim.astro';
 
 Every statement here is taken from the code or documentation of version <Claim id="pkg.version_public" /> in the public
 repository (<Claim id="repo.public_url" />, commit <Claim id="repo.commit_public" />), or from a small test run on the code of the time and labelled as such.
-The examples use `import amm_optimizer` and pass `config=amm_optimizer.presets.get("c46")`
-explicitly, because the default configuration of `minimize` is <Claim id="pkg.default_config" />. See [Get started](/get-started/).
+The examples use `import amm_optimizer` and call `minimize` without `config=`, which runs <Claim id="pkg.default_config" />
+in version 0.5.0 and later (0.3.0 ran the original sampler). See [Get started](/get-started/).
 
 ## Choosing budget and dimension
 
 AMM needs to know the budget in advance, because it uses it to decide what to run: which engines,
-for how long, and when to hand over. The dimension is the length of `x0`.
+for how long, and when to hand over. If you cannot know it, see [Anytime mode](#anytime-mode). The dimension is the length of `x0`.
 
 - **Think in multiples of D.** The benchmarks use 10, 30, 100, 300 and 1000 x D evaluations on
   dimensions 2, 5, 10, 20 and 40. Inside that grid the [results](/results/) apply. Outside it, nothing
@@ -32,13 +32,17 @@ for how long, and when to hand over. The dimension is the length of `x0`.
 
 ## Bounds
 
-`bounds=(lower, upper)` is required by `c46` and by every other preset. Each element is a scalar
+`bounds` is required by the default call (AMM, `c46`) and by every preset. Only the original ATM sampler, `config=amm_optimizer.ATMConfig()`, runs without it. It can be a list of `(low, high)` pairs, one per
+coordinate (SciPy's form), a NumPy array of shape `(D, 2)`, `scipy.optimize.Bounds`, or a tuple `(lower, upper)` in which each element is a scalar
 (the same for all coordinates) or a sequence with one value per coordinate:
 
 ```python
-amm_optimizer.minimize(f, x0=x0, budget=2000, bounds=(-5, 5), config=cfg)
-amm_optimizer.minimize(f, x0=x0, budget=2000, bounds=([0, 0, -1], [10, 3, 1]), config=cfg)
+amm_optimizer.minimize(f, x0=x0, budget=2000, bounds=(-5, 5))
+amm_optimizer.minimize(f, x0=x0, budget=2000, bounds=([0, 0, -1], [10, 3, 1]))
+amm_optimizer.minimize(f, budget=2000, bounds=[(0, 10), (0, 3), (-1, 1)])
 ```
+
+With `x0` left out the run starts from the centre of the box, and `bounds` must then give one `(low, high)` pair per coordinate so that the dimension is known.
 
 What the code does with them:
 
@@ -46,7 +50,7 @@ What the code does with them:
   raises `ValueError`.
 - In the ATM sampler, samples that fall outside the box are **folded back in**: reflected at the
   walls, with a 25% chance per sample of being clipped onto the wall instead, so that optima in a
-  corner stay reachable (`amm_optimizer/bounds.py`). The README states that, for the `improved()` preset, the
+  corner stay reachable (`amm_optimizer/bounds.py`). The README states that, for the presets built on this sampler, the
   function only ever sees points inside the box. For `c46` the other stages handle the box in their
   own way, so check it: in a small test with `c46` (boxes of different shapes, budget 300) every
   evaluated point was inside the box.
@@ -77,9 +81,8 @@ several short runs beat one long run was not studied, so treat it as an experime
 ```python
 import amm_optimizer
 
-cfg = amm_optimizer.presets.get("c46")
 runs = [
-    amm_optimizer.minimize(f, x0=x0, budget=1000, bounds=(-5, 5), seed=s, config=cfg)
+    amm_optimizer.minimize(f, x0=x0, budget=1000, bounds=(-5, 5), seed=s)
     for s in range(4)
 ]
 best = min(runs, key=lambda r: r.fun)
@@ -114,8 +117,7 @@ def objective(x):
     value = my_simulation(x)          # your code
     return float(value)
 
-result = amm_optimizer.minimize(objective, x0=x0, budget=500, bounds=(-5, 5),
-                      config=amm_optimizer.presets.get("c46"))
+result = amm_optimizer.minimize(objective, x0=x0, budget=500, bounds=(-5, 5))
 ```
 
 - **Deterministic.** The same input must give the same output. The README requires it for every
@@ -138,16 +140,36 @@ result = amm_optimizer.minimize(objective, x0=x0, budget=500, bounds=(-5, 5),
   gradients by finite differences. Those calls count against `budget`.
 - **Integers and categories** are untested. Results beyond the bbob suite are <Claim id="beyond.bbob" />.
 
+## Anytime mode
+
+AMM normally plans every phase from the budget it is given. The anytime mode does not need the budget until 10 000 evaluations have been spent, and keeps a small memory of the
+points it evaluated. The package documentation (`docs/ANYTIME.md`) describes it as follows.
+
+- **What it does.** Up to 10 000 evaluations it plans in stages of 10 x D, 20 x D, 40 x D evaluations and so on, rerunning the configuration for each larger plan from the same start point and seed. A point that an earlier stage evaluated is
+  answered from memory, without a call of `fun`. Once the next plan would exceed 10 000 evaluations, one ordinary run gets the rest of the budget, fed with every point evaluated so far. The result is the best point of any stage.
+- **When to use it.** When the budget is not known in advance or the run may be stopped early, and the objective is deterministic. It suits expensive objectives, small budgets you may cut short, and budgets of about 20 000
+  evaluations or more, where it is level with the default.
+- **When not to.** When the budget is known and lies between about 30 x D and 1000 x D: the default is .05 to .12 of the target share better there. Also when the optimizer's own CPU time matters (below the switch it costs up to 3.3 times the
+  default's per evaluation), with noisy objectives, and when the run may be stopped after the 10 000-evaluation switch.
+- **The call.**
+
+```python
+result = amm_optimizer.minimize(f, bounds=[(-5, 5)] * 10, budget=200_000, seed=0, anytime=True)
+```
+
+`budget` caps the calls of `fun`. `result.nfev` counts the calls actually made, which can be a little lower because a remembered point is not called again. `minimize` returns only when the budget is spent, so to stop an anytime run yourself,
+keep the best point in your own wrapper of the objective and raise an exception from it when time is up. The guide `docs/ANYTIME.md` in the package has a worked example, the measured costs and the limitations.
+
 ## When something goes wrong
 
 | Symptom | Cause and what to do |
 |---|---|
-| `ValueError: this variant needs bounds=(lower, upper)` | You passed a preset without `bounds`. Add `bounds=(lower, upper)`. |
+| `ValueError` saying that `bounds=` is required | You called `minimize` without `config=` (AMM) or with a preset, and without `bounds`. Add `bounds=(lower, upper)`, or pass `config=amm_optimizer.ATMConfig()` for the original sampler, which needs no bounds. The message names both ways out. |
 | `ValueError: budget must be at least 1` | `budget` was 0 or negative. |
 | `ValueError: bounds must be finite` or `every lower bound must be below its upper bound` | Fix the bounds. Infinite or equal bounds are not accepted. |
 | `ValueError: the objective must be finite at the starting point` | `fun(x0)` returned NaN or infinity. Choose a different `x0`. |
 | `ValueError: unknown preset` | The name is not in `amm_optimizer.presets.names()`. |
-| The result is the original ATM, not AMM | You left out `config=amm_optimizer.presets.get("c46")`. The default configuration is the original sampler. |
+| The result looks like the original ATM sampler, not AMM | You passed `config=amm_optimizer.ATMConfig()`, or you run version 0.3.0 or older, where leaving out `config=` ran the original sampler. Remove `config=` on 0.5.0 or newer. |
 | `RuntimeWarning` from SciPy about overflow | Seen with an objective that returned NaN on some calls. The run still returned a result. Filter the warning or fix the objective. |
 | Results change between machines | The BLAS thread count and the versions of NumPy and SciPy can change the last digits. See [Reproduce](/reproduce/). |
 | Poor result | Check that the objective is deterministic, the box is not far larger than needed, and the budget is at least about 10 x D. Then compare with a simple baseline. AMM is behind other methods in some cells, listed on the [limits](/limits/) page. |
