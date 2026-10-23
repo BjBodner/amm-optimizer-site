@@ -1,5 +1,5 @@
 /* Recorded-run player (RunPlayer.astro). Vanilla JS, no dependencies, no storage, no autoplay.
-   Data: /demo/<run>.json written by site/tools/record_run.py. Keys on the focused player:
+   Data: /demo/<run>.json written by tools/record_run.py. Keys on the focused player:
    Space play/pause, Left/Right step (Shift: 10), Home/End jump, R reset. State in the URL hash:
    #demo=f15&e=120 (function and evaluation). */
 (function () {

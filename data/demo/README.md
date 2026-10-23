@@ -1,6 +1,6 @@
 # Recorded-run demo data
 
-Written by `tools/record_run.py` (run with the atm_v2 venv and `PYTHONPATH=<worktree>`; add `--publish` to copy the files to `public/demo/`, where the player fetches them). The script takes about 25 s wall time and 8 s of CPU.
+Written by `tools/record_run.py` (run in an environment with amm-optimizer, cma and cocoex installed; add `--publish` to copy the files to `public/demo/`, where the player fetches them). The script takes about 25 s wall time and 8 s of CPU.
 
 ## What is recorded
 

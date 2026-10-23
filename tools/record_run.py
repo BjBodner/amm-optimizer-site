@@ -1,10 +1,8 @@
 """Record a few short 2-D runs of AMM (preset c46) and of pycma IPOP for the site's player.
 
-Run it with the atm_v2 virtual environment (it has cocoex and cma) and the FROZEN source on
-PYTHONPATH; nothing in the frozen worktree is modified:
+Run it in a Python environment that has amm-optimizer (the released package), cma and cocoex installed:
 
-    cd <repository root>
-    PYTHONPATH=src python tools/record_run.py
+    python tools/record_run.py
 
 Every evaluation is recorded by an objective wrapper (index = position, x, regret = f - f_opt).
 Stage boundaries are taken ONLY from the documented Profiler hook (atm.minimize(profile=...),
