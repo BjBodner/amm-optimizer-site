@@ -41,10 +41,16 @@ const source = SHOW_AUTHOR ? 'https://github.com/BjBodner/bbob-landscapes' : '';
 <script is:inline>
 	(() => {
 		// 100vw counts the scrollbar; the window's inner width without it is measured instead.
-		const fit = () => document.documentElement.style.setProperty('--amm-vw', document.documentElement.clientWidth + 'px');
+		// A hidden or not yet laid out page reports a width of 0: then fall back to 100vw and measure again later.
+		const fit = () => {
+			const w = document.documentElement.clientWidth;
+			if (w > 0) document.documentElement.style.setProperty('--amm-vw', w + 'px');
+			else document.documentElement.style.removeProperty('--amm-vw');
+		};
 		fit();
 		if (window.ResizeObserver) new ResizeObserver(fit).observe(document.documentElement);   // also when a scrollbar appears
-		else addEventListener('resize', fit);
+		addEventListener('resize', fit);
+		document.addEventListener('visibilitychange', fit);
 		const el = document.getElementById('amm-race');
 		if (!el || !window.BBOBRace) return;
 		window.BBOBRace.mount(el, {
